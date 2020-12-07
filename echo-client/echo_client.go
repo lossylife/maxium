@@ -22,18 +22,20 @@ func connection(ip, port string) {
 	defer conn.Close()
 
 	for {
-		_,err := conn.Write([]byte("hello"))
+		_,err := conn.Write([]byte("hello\n"))
 		if err != nil {
 			fmt.Println("write to server failed, ", err.Error())
 			return
 		}
 
 		buf := make([]byte, 2000)
-		_,err = conn.Read(buf)
+		n,err := conn.Read(buf)
 		if err != nil {
 			fmt.Println("read from server failed, ", err.Error())
 			return
 		}
+
+		fmt.Println(string(buf[:n]))
 
 		time.Sleep(10 * time.Second)
 	}
