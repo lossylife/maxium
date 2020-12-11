@@ -1,6 +1,6 @@
 FROM envoy
 
-RUN apt update && atp install -y \
+RUN apt update && apt install -y \
     git \
     graphviz \
     wget
