@@ -9,6 +9,7 @@ import (
 )
 
 func connection(ip, port string) {
+    rand.Seed(time.Now().UnixNano())
 	strAddr := ip + ":" + port
 	s,err := net.ResolveTCPAddr("tcp", strAddr)
 	if err != nil {
