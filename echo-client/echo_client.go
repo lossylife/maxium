@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 	"fmt"
+    "math/rand"
 )
 
 func connection(ip, port string) {
@@ -37,7 +38,7 @@ func connection(ip, port string) {
 
 		fmt.Println(string(buf[:n]))
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(time.Duration(rand.Intn(20)) * time.Second)
 	}
 }
 
