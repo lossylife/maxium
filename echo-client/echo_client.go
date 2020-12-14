@@ -31,14 +31,14 @@ func connection(ip, port string) {
             _,err := conn.Write([]byte("hello\n"))
             if err != nil {
                 fmt.Println("write to server failed, ", err.Error())
-                continue
+                break
             }
 
             buf := make([]byte, 2000)
             n,err := conn.Read(buf)
             if err != nil {
                 fmt.Println("read from server failed, ", err.Error())
-                continue
+                break
             }
 
             fmt.Println(string(buf[:n]))
