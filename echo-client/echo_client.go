@@ -12,11 +12,12 @@ import (
 func connection(local, ip, port string) {
     rand.Seed(time.Now().UnixNano())
 	strAddr := ip + ":" + port
+    strLAddr := local + ":" + "0"
 
     for {
         time.Sleep(time.Duration(rand.Intn(20)) * time.Second)
 
-        laddr,err := net.ResolveTCPAddr("tcp", local)
+        laddr,err := net.ResolveTCPAddr("tcp", strLAddr)
         if err != nil {
             fmt.Println("resolve local address failed, ", err.Error())
             continue
