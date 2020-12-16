@@ -6,26 +6,43 @@ import (
 	"time"
 	"fmt"
     "math/rand"
+    "syscall"
 )
 
-func connection(ip, port string) {
+func connection(local, ip, port string) {
     rand.Seed(time.Now().UnixNano())
 	strAddr := ip + ":" + port
 
     for {
         time.Sleep(time.Duration(rand.Intn(20)) * time.Second)
 
-        s,err := net.ResolveTCPAddr("tcp", strAddr)
+        laddr,err := net.ResolveTCPAddr("tcp", local)
         if err != nil {
-            fmt.Println("resolve server address failed, ", err.Error())
+            fmt.Println("resolve local address failed, ", err.Error())
             continue
         }
-        conn,err := net.DialTCP("tcp", nil, s)
+
+        dialer := &net.Dialer {
+            LocalAddr: laddr,
+            Control: func(network, address string, c syscall.RawConn) error {
+                return c.Control(func(fd uintptr) {
+                    err = syscall.SetsockoptInt(int(fd), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
+                    if err != nil {
+                        fmt.Println("failed to set IP_TRANSPARENT, ", err.Error())
+                        return
+                    }
+                })
+            },
+        }
+
+
+        conn,err := dialer.Dial("tcp", strAddr)
         if err != nil {
             fmt.Println("connect to server failed, ", err.Error())
             continue
         }
         defer conn.Close()
+
 
         for {
             _,err := conn.Write([]byte("hello\n"))
@@ -52,13 +69,15 @@ func main(){
 	c := flag.Int("c", 1, "connections")
 	i := flag.String("i", "127.0.0.1", "server ip")
 	p := flag.String("p", "80", "server post")
+	b := flag.String("b", "0.0.0.0", "bind local ip")
 	flag.Parse()
 
 	conns := *c
 	ip := *i
 	port := *p
+    local := *b
 	for i:=0; i<conns; i++ {
-		go connection(ip, port)
+		go connection(local, ip, port)
 		time.Sleep(5 * time.Millisecond)
 	}
 
