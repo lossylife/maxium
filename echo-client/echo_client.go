@@ -27,10 +27,12 @@ func connection(local, ip, port string) {
             LocalAddr: laddr,
             Control: func(network, address string, c syscall.RawConn) error {
                 return c.Control(func(fd uintptr) {
-                    err = syscall.SetsockoptInt(int(fd), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
-                    if err != nil {
-                        fmt.Println("failed to set IP_TRANSPARENT, ", err.Error())
-                        return
+                    if local != "0.0.0.0" {
+                        err = syscall.SetsockoptInt(int(fd), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
+                        if err != nil {
+                            fmt.Println("failed to set IP_TRANSPARENT, ", err.Error())
+                            return
+                        }
                     }
                 })
             },
