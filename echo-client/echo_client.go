@@ -11,39 +11,50 @@ import (
 
 func connection(local, ip, port string) {
     rand.Seed(time.Now().UnixNano())
-	strAddr := ip + ":" + port
+	strRAddr := ip + ":" + port
     strLAddr := local + ":" + "0"
 
+    var conn net.Conn
     for {
         time.Sleep(time.Duration(rand.Intn(20)) * time.Second)
 
-        laddr,err := net.ResolveTCPAddr("tcp", strLAddr)
-        if err != nil {
-            fmt.Println("resolve local address failed, ", err.Error())
-            continue
-        }
-
-        dialer := &net.Dialer {
-            LocalAddr: laddr,
-            Control: func(network, address string, c syscall.RawConn) error {
-                return c.Control(func(fd uintptr) {
-                    if local != "0.0.0.0" {
+        if local == "0.0.0.0" {
+            raddr,err := net.ResolveTCPAddr("tcp", strRAddr)
+            if err != nil {
+                fmt.Println("resolve remote address failed, ", err.Error())
+                continue
+            }
+            conn,err = net.DialTCP("tcp", nil, raddr)
+            if err != nil {
+                fmt.Println("connect to server failed, ", err.Error())
+                continue
+            }
+        }else{
+            laddr,err := net.ResolveTCPAddr("tcp", strLAddr)
+            if err != nil {
+                fmt.Println("resolve local address failed, ", err.Error())
+                continue
+            }
+            dialer := &net.Dialer {
+                LocalAddr: laddr,
+                Control: func(network, address string, c syscall.RawConn) error {
+                    return c.Control(func(fd uintptr) {
                         err = syscall.SetsockoptInt(int(fd), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
                         if err != nil {
                             fmt.Println("failed to set IP_TRANSPARENT, ", err.Error())
                             return
                         }
-                    }
-                })
-            },
+                    })
+                },
+            }
+            conn,err = dialer.Dial("tcp", strRAddr)
+            if err != nil {
+                fmt.Println("connect to server failed, ", err.Error())
+                continue
+            }
         }
 
 
-        conn,err := dialer.Dial("tcp", strAddr)
-        if err != nil {
-            fmt.Println("connect to server failed, ", err.Error())
-            continue
-        }
         defer conn.Close()
 
 
