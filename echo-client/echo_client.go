@@ -6,6 +6,7 @@ import (
 	"time"
 	"fmt"
     "math/rand"
+    "math/big"
     "syscall"
 )
 
@@ -81,21 +82,49 @@ func connection(local, ip, port string) {
 
 func main(){
 	c := flag.Int("c", 1, "connections")
+    m := flag.Int("m", 40000, "how many connections per ip")
 	i := flag.String("i", "127.0.0.1", "server ip")
 	p := flag.String("p", "80", "server post")
-	b := flag.String("b", "0.0.0.0", "bind local ip")
+	b := flag.String("b", "0.0.0.0", "local ip base")
+    w := flag.Int("w", 1000, "wait ${w} ms after create ${g} connections")
+    g := flag.Int("g", 100, "wait ${w} ms after create ${g} connections")
 	flag.Parse()
 
 	conns := *c
+    many := *m
 	ip := *i
 	port := *p
-    local := *b
-	for i:=0; i<conns; i++ {
-		go connection(local, ip, port)
-		time.Sleep(5 * time.Millisecond)
-	}
+    base := *b
+    wait := *w
+    group := *g
+    baseIP := net.ParseIP(base)
+
+    current := 0
+    for i:=0; i<=conns/many; i++ {
+        ipb := big.NewInt(0).SetBytes([]byte(baseIP))
+        ipb.Add(ipb, big.NewInt(int64(i)))
+        b := ipb.Bytes()
+        b = append(make([]byte, len(baseIP)-len(b)), b...)
+        localIp := net.IP(b).String()
+
+        bucket := many
+        if bucket > conns - i * many {
+            bucket = conns - i * many
+        }
+        for j:=0; j<bucket; j++ {
+            if true {
+                go connection(localIp, ip, port)
+                current += 1
+                if current % group == 0 {
+                    time.Sleep(time.Duration(wait) * time.Millisecond)
+                }
+            }
+        }
+        fmt.Printf("localIp: %s, bucket: %d, current: %d\n", localIp, bucket, current)
+    }
 
 	for {
 		time.Sleep(time.Second)
 	}
 }
+
