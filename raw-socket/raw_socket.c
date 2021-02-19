@@ -8,6 +8,7 @@
 #include <netinet/ip.h>
 #include <linux/tcp.h>
 #include <time.h>
+#include <stdbool.h>
 
 int main(){
 	int sock_r;
@@ -31,8 +32,8 @@ int main(){
 
 		time_t tnow = time(NULL);
 		if(tnow != tlast){
-			mbps = bytes * 8 / 1024 / 1024;
-			printf("recv: %dMbps, %dpps\n", mbps, pps);
+			double mbps = bytes * 8.0 / 1024 / 1024;
+			printf("recv: %.2lfMbps, %dpps\n", mbps, pps);
 
 			bytes = 0;
 			pps = 0;
