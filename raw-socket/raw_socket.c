@@ -55,7 +55,7 @@ int main(){
 		}
 		struct ethhdr *eth = (struct ethhdr *)(buffer);
 		if(eth->h_proto != htons(ETH_P_IP)){
-			printf("l: %d, eth->h_proto = %d\n", __LINE__, eth->h_proto);
+			//printf("l: %d, eth->h_proto = %d\n", __LINE__, eth->h_proto);
 			continue;
 		}
 
