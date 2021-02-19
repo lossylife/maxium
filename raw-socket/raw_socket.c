@@ -50,7 +50,7 @@ int main(){
 
 		// eth
 		if(buflen < sizeof(struct ethhdr)){
-			printf("l: %d\n", __LINE__);
+			//printf("l: %d\n", __LINE__);
 			continue;
 		}
 		struct ethhdr *eth = (struct ethhdr *)(buffer);
@@ -61,19 +61,19 @@ int main(){
 
 		// ip
 		if(buflen < sizeof(struct ethhdr) + sizeof(struct iphdr)){
-			printf("l: %d\n", __LINE__);
+			//printf("l: %d\n", __LINE__);
 			continue;
 		}
 		struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
 		if(ip->protocol != 6){
-			printf("l: %d\n", __LINE__);
+			//printf("l: %d\n", __LINE__);
 			continue;
 		}
 
 		// tcp
 		int header_len = sizeof(struct ethhdr) + ip->ihl * 4;
 		if(buflen < header_len + sizeof(struct tcphdr)){
-			printf("l: %d\n", __LINE__);
+			//printf("l: %d\n", __LINE__);
 			continue;
 		}
 		struct tcphdr *tcp = (struct tcphdr *)(buffer + header_len);
