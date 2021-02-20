@@ -18,6 +18,13 @@ typedef struct task {
 void *receive(void *arg) {
     task_t *task = (task_t *)arg;
 
+    int sock_r;
+    sock_r = socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL));
+    if(sock_r<0){
+        printf("error in socket\n");
+        return -1;
+    }
+
     unsigned char *buffer = (unsigned char *) malloc(65536); //to receive data
     memset(buffer,0,65536);
     struct sockaddr saddr;
@@ -39,7 +46,7 @@ void *receive(void *arg) {
         }
         int buflen;
         //Receive a network packet and copy in to buffer
-        buflen=recvfrom(task->sock_r,buffer,65536,0,&saddr,(socklen_t *)&saddr_len);
+        buflen=recvfrom(sock_r,buffer,65536,0,&saddr,(socklen_t *)&saddr_len);
         if(buflen<0)
         {
             perror("error in reading recvfrom function\n");
@@ -94,18 +101,10 @@ int main(int argc, char **argv){
 
     int n = atoi(argv[1]);
 
-    int sock_r;
-    sock_r = socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL));
-    if(sock_r<0){
-        printf("error in socket\n");
-        return -1;
-    }
-
     int i;
     for(i=0; i<n; i++){
         pthread_t tid;
         task_t *task = malloc(sizeof(task_t));
-        task->sock_r = sock_r;
         task->id = i;
         pthread_create(&tid, NULL, receive, task);
     }
