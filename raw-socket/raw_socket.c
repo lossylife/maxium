@@ -92,7 +92,7 @@ int main(int argc, char **argv){
         return -1;
     }
 
-    int n = atoi(argv[1];
+    int n = atoi(argv[1]);
 
     int sock_r;
     sock_r = socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL));
