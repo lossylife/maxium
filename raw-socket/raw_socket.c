@@ -107,7 +107,7 @@ int main(int argc, char **argv){
         task_t *task = malloc(sizeof(task_t));
         task->sock_r = sock_r;
         task->id = i;
-        pthread_create(&tid, NULL, receive, &task);
+        pthread_create(&tid, NULL, receive, task);
     }
 
     while(1){
