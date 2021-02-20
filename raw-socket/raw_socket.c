@@ -101,6 +101,7 @@ int main(int argc, char **argv){
         return -1;
     }
 
+    int i;
     for(i=0; i<n; i++){
         pthread_t tid;
         task_t *task = malloc(sizeof(task_t));
