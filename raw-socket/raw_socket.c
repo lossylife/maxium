@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,9 @@
 #include <time.h>
 #include <stdbool.h>
 
+#define VLEN 1024
+#define BUFSIZE 2048
+
 int main(){
 	int sock_r;
 	sock_r=socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL));
@@ -19,8 +23,6 @@ int main(){
 		return -1;
 	}
 
-#define VLEN 1024
-#define BUFSIZE 2048
     struct mmsghdr msgs[VLEN];
     struct iovec iovecs[VLEN];
     char bufs[VLEN][BUFSIZE+1];
