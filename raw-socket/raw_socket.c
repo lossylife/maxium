@@ -59,7 +59,7 @@ int main(){
             msgs[i].msg_hdr.msg_iov    = &iovecs[i];
             msgs[i].msg_hdr.msg_iovlen = 1;
         }
-        int retval = recvmmsg(sockfd, msgs, VLEN, 0, &timeout);
+        int retval = recvmmsg(sock_r, msgs, VLEN, 0, NULL);
         if (retval == -1) {
             perror("recvmmsg()");
             return -1;
