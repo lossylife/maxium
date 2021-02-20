@@ -19,14 +19,23 @@ int main(){
 		return -1;
 	}
 
+#define VLEN 1024
+#define BUFSIZE 2048
+    struct mmsghdr msgs[VLEN];
+    struct iovec iovecs[VLEN];
+    char bufs[VLEN][BUFSIZE+1];
+    memset(msgs, 0, sizeof(msgs));
+
     int bufsize = 1024*1024;
     struct iovec iov;
     iov.iov_base = malloc(bufsize);
     iov.iov_len = bufsize;
 
-	int i;
-	struct sockaddr saddr;
-	int saddr_len = sizeof (saddr);
+    
+
+    int i;
+    struct sockaddr saddr;
+    int saddr_len = sizeof (saddr);
     uint64_t max_read = 0;
 
 	time_t tlast = 0;
@@ -34,71 +43,37 @@ int main(){
 	uint64_t pps = 0;
 	for(i=0; true; i++){
 
-		time_t tnow = time(NULL);
-		if(tnow != tlast){
-			double mbps = bytes * 8.0 / 1024 / 1024;
-			printf("recv: %.2lfMbps, %dpps, max %llu bytes\n", mbps, pps, max_read);
+        time_t tnow = time(NULL);
+        if(tnow != tlast){
+            double mbps = bytes * 8.0 / 1024 / 1024;
+            printf("recv: %.2lfMbps, %dpps, max read %llu\n", mbps, pps, max_read);
 
 			bytes = 0;
 			pps = 0;
 			tlast = tnow;
 		}
         
-		int buflen;
-		buflen = readv(sock_r, &iov, 1);
-		if(buflen<0)
-		{
-			printf("error in reading recvfrom function\n");
-			return -1;
-		}
-        if(buflen > max_read){
-            max_read = buflen;
+        for (int i = 0; i < VLEN; i++) {
+            iovecs[i].iov_base         = bufs[i];
+            iovecs[i].iov_len          = BUFSIZE;
+            msgs[i].msg_hdr.msg_iov    = &iovecs[i];
+            msgs[i].msg_hdr.msg_iovlen = 1;
         }
-        bytes += buflen;
-
-#if 0
-        int remain = buflen;
-        char *buffer = iov->iov_base;
-
-        while(remain > 0){
-
-            // eth
-            if(remain < sizeof(struct ethhdr)){
-                //printf("l: %d\n", __LINE__);
-                continue;
-            }
-            struct ethhdr *eth = (struct ethhdr *)(buffer);
-            if(eth->h_proto != htons(ETH_P_IP)){
-                //printf("l: %d, eth->h_proto = %d\n", __LINE__, eth->h_proto);
-                continue;
-            }
-
-            // ip
-            if(remain < sizeof(struct ethhdr) + sizeof(struct iphdr)){
-                //printf("l: %d\n", __LINE__);
-                continue;
-            }
-            struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
-            if(ip->protocol != 6){
-                //printf("l: %d\n", __LINE__);
-                continue;
-            }
-
-            // tcp
-            int header_len = sizeof(struct ethhdr) + ip->ihl * 4;
-            if(remain < header_len + sizeof(struct tcphdr)){
-                //printf("l: %d\n", __LINE__);
-                continue;
-            }
-            struct tcphdr *tcp = (struct tcphdr *)(buffer + header_len);
-
-            pps += 1;
-            bytes += remain;
-            //printf("received a tcp packet: 0x%08x:%d -> 0x%08x:%d\n", \
-            ip->saddr, htons(tcp->source), ip->daddr, htons(tcp->dest));
+        int retval = recvmmsg(sockfd, msgs, VLEN, 0, &timeout);
+        if (retval == -1) {
+            perror("recvmmsg()");
+            return -1;
         }
-#endif
-	}
+
+        pps += retval;
+        for (int i = 0; i < retval; i++) {
+            bytes += msgs[i].msg_len;
+        }
+
+        if(retval > max_read){
+            max_read = retval;
+        }
+    }
 
 	return 0;
 }
