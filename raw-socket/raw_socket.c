@@ -42,7 +42,7 @@ void *receive(void *arg) {
         buflen=recvfrom(task->sock_r,buffer,65536,0,&saddr,(socklen_t *)&saddr_len);
         if(buflen<0)
         {
-            printf("error in reading recvfrom function\n");
+            perror("error in reading recvfrom function\n");
             return -1;
         }
 
