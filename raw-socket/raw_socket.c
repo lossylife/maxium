@@ -27,6 +27,7 @@ int main(){
 	int i;
 	struct sockaddr saddr;
 	int saddr_len = sizeof (saddr);
+    uint64_t max_read = 0;
 
 	time_t tlast = 0;
 	uint64_t bytes = 0;
@@ -36,7 +37,7 @@ int main(){
 		time_t tnow = time(NULL);
 		if(tnow != tlast){
 			double mbps = bytes * 8.0 / 1024 / 1024;
-			printf("recv: %.2lfMbps, %dpps\n", mbps, pps);
+			printf("recv: %.2lfMbps, %dpps, max %llu bytes\n", mbps, pps, max_read);
 
 			bytes = 0;
 			pps = 0;
@@ -50,6 +51,9 @@ int main(){
 			printf("error in reading recvfrom function\n");
 			return -1;
 		}
+        if(buflen > max_read){
+            max_read = buflen;
+        }
         bytes += buflen;
 
 #if 0
