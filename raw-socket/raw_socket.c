@@ -147,7 +147,7 @@ int main(int argc, char *argv[]){
         return(2);
     }
 
-    pcap_loop(handle, 100, got_packet, NULL);
+    pcap_loop(handle, -1, got_packet, NULL);
 
     /* And close the session */
     pcap_close(handle);
