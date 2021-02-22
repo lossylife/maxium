@@ -31,15 +31,7 @@ int main(){
 	uint64_t pps = 0;
 	for(i=0; true; i++){
 
-		time_t tnow = time(NULL);
-		if(tnow != tlast){
-			double mbps = bytes * 8.0 / 1024 / 1024;
-			printf("recv: %.2lfMbps, %dpps\n", mbps, pps);
-
-			bytes = 0;
-			pps = 0;
-			tlast = tnow;
-		}
+		
 		int buflen;
 		//Receive a network packet and copy in to buffer
 		buflen=recvfrom(sock_r,buffer,65536,0,&saddr,(socklen_t *)&saddr_len);
@@ -92,9 +84,24 @@ int main(){
 #include <pcap.h>
 #include <stdio.h>
 
+static time_t tlast = 0;
+static uint64_t bytes = 0;
+static uint64_t pps = 0;
+
 void got_packet(u_char *args, const struct pcap_pkthdr *header,
                 const u_char *packet){
-    printf("got a packet: length = %d\n", header->len);
+    bytes += header->len;
+    pps += 1;
+
+    time_t tnow = time(NULL);
+    if(tnow != tlast){
+        double mbps = bytes * 8.0 / 1024 / 1024;
+        printf("recv: %.2lfMbps, %dpps\n", mbps, pps);
+
+        bytes = 0;
+        pps = 0;
+        tlast = tnow;
+    }
 }
 
 int main(int argc, char *argv[]){
