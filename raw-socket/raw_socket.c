@@ -92,6 +92,11 @@ int main(){
 #include <pcap.h>
 #include <stdio.h>
 
+void got_packet(u_char *args, const struct pcap_pkthdr *header,
+                const u_char *packet){
+    printf("got a packet: length = %d\n", header->len);
+}
+
 int main(int argc, char *argv[]){
     pcap_t *handle;         /* Session handle */
     char *dev;          /* The device to sniff on */
@@ -134,10 +139,9 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handle));
         return(2);
     }
-    /* Grab a packet */
-    packet = pcap_next(handle, &header);
-    /* Print its length */
-    printf("Jacked a packet with length of [%d]\n", header.len);
+
+    pcap_loop(handle, 100, got_packet, NULL);
+
     /* And close the session */
     pcap_close(handle);
     return(0);
