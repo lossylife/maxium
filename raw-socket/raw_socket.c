@@ -109,7 +109,7 @@ int main(int argc, char *argv[]){
     char *dev;          /* The device to sniff on */
     char errbuf[PCAP_ERRBUF_SIZE];  /* Error string */
     struct bpf_program fp;      /* The compiled filter */
-    char filter_exp[] = "tcp port 1883";  /* The filter expression */
+    char filter_exp[] = "tcp port 1883 or tcp port 1884 or tcp port 1885 or tcp port 1887";  /* The filter expression */
     bpf_u_int32 mask;       /* Our netmask */
     bpf_u_int32 net;        /* Our IP */
     struct pcap_pkthdr header;  /* The header that pcap gives us */
