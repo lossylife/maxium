@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <net/ethernet.h>
 #include <netinet/ip.h>
+#include <linux/if_packet.h>
 #include <linux/tcp.h>
 #include <time.h>
 #include <stdbool.h>
@@ -63,7 +66,7 @@ void *receive(void *arg) {
         if(buflen<0)
         {
             perror("error in reading recvfrom function\n");
-            return -1;
+            return NULL;
         }
 
         // eth
