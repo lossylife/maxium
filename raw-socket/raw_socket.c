@@ -1,3 +1,5 @@
+#define _GNU_SOURCE             /* See feature_test_macros(7) */
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +24,15 @@ typedef struct task {
 
 void *receive(void *arg) {
     task_t *task = (task_t *)arg;
+
+    cpu_set_t current_cpu_set;
+    CPU_ZERO(&current_cpu_set);
+    CPU_SET(task->id, &current_cpu_set);
+    int ret = sched_setaffinity(0, sizeof(current_cpu_set), &current_cpu_set);
+    if(ret != 0){
+        printf("error in sched_setaffinity\n");
+        return NULL;
+    }
 
     task->sock_r = socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL));
     if(task->sock_r<0){
