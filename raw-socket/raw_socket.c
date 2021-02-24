@@ -41,68 +41,39 @@ void *receive(void *arg) {
         return NULL;
     }
 
-    unsigned char *buffer = (unsigned char *) malloc(65536); //to receive data
-    memset(buffer,0,65536);
-    struct sockaddr saddr;
-    int saddr_len = sizeof (saddr);
+    int bufsize = 1024*1024;
+    struct iovec iov;
+    iov.iov_base = malloc(bufsize);
+    iov.iov_len = bufsize;
 
     int i;
+    uint64_t max_read = 0;
+
     time_t tlast = 0;
     uint64_t bytes = 0;
     uint64_t pps = 0;
     for(i=0; true; i++){
+
         time_t tnow = time(NULL);
         if(tnow != tlast){
             double mbps = bytes * 8.0 / 1024 / 1024;
-            printf("task %d recv: %.2lfMbps, %dpps\n", task->id, mbps, pps);
+            printf("recv: %.2lfMbps, %dpps, max %llu bytes\n", mbps, pps, max_read);
 
             bytes = 0;
             pps = 0;
             tlast = tnow;
         }
+
         int buflen;
-        //Receive a network packet and copy in to buffer
-        buflen=recvfrom(task->sock_r,buffer,65536,0,&saddr,(socklen_t *)&saddr_len);
-        if(buflen<0)
-        {
-            perror("error in reading recvfrom function\n");
+        buflen = readv(sock_r, &iov, 1);
+        if(buflen<0){
+            printf("error in reading recvfrom function\n");
             return NULL;
         }
-
-        // eth
-        if(buflen < sizeof(struct ethhdr)){
-            //printf("l: %d\n", __LINE__);
-            continue;
+        if(buflen > max_read){
+            max_read = buflen;
         }
-        struct ethhdr *eth = (struct ethhdr *)(buffer);
-        if(eth->h_proto != htons(ETH_P_IP)){
-            //printf("l: %d, eth->h_proto = %d\n", __LINE__, eth->h_proto);
-            continue;
-        }
-
-        // ip
-        if(buflen < sizeof(struct ethhdr) + sizeof(struct iphdr)){
-            //printf("l: %d\n", __LINE__);
-            continue;
-        }
-        struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
-        if(ip->protocol != 6){
-            //printf("l: %d\n", __LINE__);
-            continue;
-        }
-
-        // tcp
-        int header_len = sizeof(struct ethhdr) + ip->ihl * 4;
-        if(buflen < header_len + sizeof(struct tcphdr)){
-            //printf("l: %d\n", __LINE__);
-            continue;
-        }
-        struct tcphdr *tcp = (struct tcphdr *)(buffer + header_len);
-
-        pps += 1;
         bytes += buflen;
-        //printf("received a tcp packet: 0x%08x:%d -> 0x%08x:%d\n", \
-        ip->saddr, htons(tcp->source), ip->daddr, htons(tcp->dest));
     }
 
     return NULL;
