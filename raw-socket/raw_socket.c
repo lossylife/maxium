@@ -33,7 +33,7 @@ struct block_desc {
     struct tpacket_hdr_v1 h1;
 };
 
-void speed_printer() {
+void *speed_printer(void *arg) {
     while (true) {
         uint64_t packets_before = received_packets;
         uint64_t bytes_before = received_bytes;
