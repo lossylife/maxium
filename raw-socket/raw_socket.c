@@ -170,6 +170,9 @@ int main(int argc, char **argv){
         return -1;
     }
 
+    pthread_t tid_printer;
+    pthread_create(&tid_printer, NULL, speed_printer, NULL);
+
     int n = atoi(argv[1]);
     int fanout_group_id = getpid() & 0xffff;
 
