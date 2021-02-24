@@ -5,6 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/mman.h>
+#include <poll.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
@@ -16,11 +18,55 @@
 #include <time.h>
 #include <stdbool.h>
 
+// 4194304 bytes
+unsigned int blocksiz = 1 << 22; 
+// 2048 bytes
+unsigned int framesiz = 1 << 11; 
+unsigned int blocknum = 64; 
+
+uint64_t received_packets = 0;
+uint64_t received_bytes = 0;
+
+void speed_printer() {
+    while (true) {
+        uint64_t packets_before = received_packets;
+        uint64_t bytes_before = received_bytes;
+        sleep(1);       
+        uint64_t packets_after = received_packets;
+        uint64_t bytes_after = received_bytes;
+        uint64_t pps = packets_after - packets_before;
+        uint64_t bytes = bytes_after - bytes_before;
+        printf("We process: %llu pps at %.2f Mbps\n", pps, bytes * 8 / 1024 / 1024);
+    }
+}
+
 typedef struct task {
     int sock_r;
     int id;
     int fanout_group_id;
 }task_t;
+
+void flush_block(struct block_desc *pbd) {
+    pbd->h1.block_status = TP_STATUS_KERNEL;
+}
+
+void walk_block(struct block_desc *pbd, const int block_num) {
+    int num_pkts = pbd->h1.num_pkts, i;
+    unsigned long bytes = 0;
+    struct tpacket3_hdr *ppd;
+
+    ppd = (struct tpacket3_hdr *) ((uint8_t *) pbd +
+            pbd->h1.offset_to_first_pkt);
+    for (i = 0; i < num_pkts; ++i) {
+        bytes += ppd->tp_snaplen;
+
+        ppd = (struct tpacket3_hdr *) ((uint8_t *) ppd +
+                ppd->tp_next_offset);
+    }
+
+    received_packets += num_pkts;
+    received_bytes += bytes;
+}
 
 void *receive(void *arg) {
     task_t *task = (task_t *)arg;
@@ -40,55 +86,74 @@ void *receive(void *arg) {
         return NULL;
     }
 
+    
+
+
+    int version = TPACKET_V3;
+    int setsockopt_packet_version = setsockopt(task->sock_r, SOL_PACKET, PACKET_VERSION, &version, sizeof(version));
+    if (setsockopt_packet_version < 0) {
+        printf("Can't set packet v3 version\n");
+        return NULL;
+    }
+
+    struct tpacket_req3 req;
+    memset(&req, 0, sizeof(req));
+    req.tp_block_size = blocksiz;
+    req.tp_frame_size = framesiz;
+    req.tp_block_nr = blocknum;
+    req.tp_frame_nr = (blocksiz * blocknum) / framesiz;
+    req.tp_retire_blk_tov = 60; // Timeout in msec
+    req.tp_feature_req_word = TP_FT_REQ_FILL_RXHASH;
+    int setsockopt_rx_ring = setsockopt(task->sock_r, SOL_PACKET , PACKET_RX_RING , (void*)&req , sizeof(req));
+    if (setsockopt_rx_ring == -1) {
+        printf("Can't enable RX_RING for AF_PACKET socket\n");
+        return NULL;
+    }
+
+    uint8_t* mapped_buffer = NULL;
+    struct iovec* rd = NULL;
+    mapped_buffer = (uint8_t*)mmap(NULL, req.tp_block_size * req.tp_block_nr, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, task->sock_r, 0);
+    if (mapped_buffer == MAP_FAILED) {
+        printf("mmap failed!\n");
+        return NULL;
+    }
+
+    rd = (struct iovec*)malloc(req.tp_block_nr * sizeof(struct iovec));
+    for (int i = 0; i < req.tp_block_nr; ++i) {
+        rd[i].iov_base = mapped_buffer + (i * req.tp_block_size);
+        rd[i].iov_len = req.tp_block_size;
+    }
+
     // PACKET_FANOUT_LB - round robin
     // PACKET_FANOUT_CPU - send packets to CPU where packet arrived
     int fanout_type = PACKET_FANOUT_CPU; 
-
     int fanout_arg = (task->fanout_group_id | (fanout_type << 16));
-
     int setsockopt_fanout = setsockopt(task->sock_r, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg));
-
     if (setsockopt_fanout < 0) {
         printf("Can't configure fanout\n");
         return NULL;
     }
 
-    int bufsize = 1024*1024;
-    struct iovec iov;
-    iov.iov_base = malloc(bufsize);
-    iov.iov_len = bufsize;
+    unsigned int current_block_num = 0;
+    struct pollfd pfd;
+    memset(&pfd, 0, sizeof(pfd));
 
-    int i;
-    uint64_t max_read = 0;
+    pfd.fd = task->sock_r;
+    pfd.events = POLLIN | POLLERR;
+    pfd.revents = 0;
 
-    time_t tlast = 0;
-    uint64_t bytes = 0;
-    uint64_t pps = 0;
-    for(i=0; true; i++){
+    while (true) {
+        struct block_desc *pbd = (struct block_desc *) rd[current_block_num].iov_base;
 
-        time_t tnow = time(NULL);
-        if(tnow != tlast){
-            double mbps = bytes * 8.0 / 1024 / 1024;
-            printf("task %d recv: %.2lfMbps, %dpps, max %llu bytes\n", task->id, mbps, pps, max_read);
+        if ((pbd->h1.block_status & TP_STATUS_USER) == 0) {
+            poll(&pfd, 1, -1);
+            continue;
+        }   
 
-            bytes = 0;
-            pps = 0;
-            tlast = tnow;
-        }
-
-        int buflen;
-        buflen = readv(task->sock_r, &iov, 1);
-        if(buflen<0){
-            printf("error in reading recvfrom function\n");
-            return NULL;
-        }
-        if(buflen > max_read){
-            max_read = buflen;
-        }
-        bytes += buflen;
-        pps += buflen / 66;
-    }
-
+        walk_block(pbd, current_block_num);
+        flush_block(pbd);
+        current_block_num = (current_block_num + 1) % blocknum;
+    }   
     return NULL;
 }
 
