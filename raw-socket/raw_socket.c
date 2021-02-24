@@ -27,6 +27,12 @@ unsigned int blocknum = 64;
 uint64_t received_packets = 0;
 uint64_t received_bytes = 0;
 
+struct block_desc {
+    uint32_t version;
+    uint32_t offset_to_priv;
+    struct tpacket_hdr_v1 h1;
+};
+
 void speed_printer() {
     while (true) {
         uint64_t packets_before = received_packets;
