@@ -65,7 +65,7 @@ void *receive(void *arg) {
         }
 
         int buflen;
-        buflen = readv(sock_r, &iov, 1);
+        buflen = readv(task->sock_r, &iov, 1);
         if(buflen<0){
             printf("error in reading recvfrom function\n");
             return NULL;
