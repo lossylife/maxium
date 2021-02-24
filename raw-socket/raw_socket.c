@@ -58,7 +58,7 @@ void *receive(void *arg) {
         time_t tnow = time(NULL);
         if(tnow != tlast){
             double mbps = bytes * 8.0 / 1024 / 1024;
-            printf("recv: %.2lfMbps, %dpps, max %llu bytes\n", mbps, pps, max_read);
+            printf("task %d recv: %.2lfMbps, %dpps, max %llu bytes\n", task->id, mbps, pps, max_read);
 
             bytes = 0;
             pps = 0;
@@ -75,6 +75,7 @@ void *receive(void *arg) {
             max_read = buflen;
         }
         bytes += buflen;
+        pps += buflen / 66;
     }
 
     return NULL;
