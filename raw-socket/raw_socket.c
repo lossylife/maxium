@@ -13,16 +13,29 @@
 typedef struct task {
     int sock_r;
     int id;
+    int fanout_group_id;
 }task_t;
 
 void *receive(void *arg) {
     task_t *task = (task_t *)arg;
 
-    int sock_r;
-    sock_r = socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL));
-    if(sock_r<0){
+    task->sock_r = socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL));
+    if(task->sock_r<0){
         printf("error in socket\n");
-        return -1;
+        return NULL;
+    }
+
+    // PACKET_FANOUT_LB - round robin
+    // PACKET_FANOUT_CPU - send packets to CPU where packet arrived
+    int fanout_type = PACKET_FANOUT_CPU; 
+
+    int fanout_arg = (task->fanout_group_id | (fanout_type << 16));
+
+    int setsockopt_fanout = setsockopt(task->sock_r, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg));
+
+    if (setsockopt_fanout < 0) {
+        printf("Can't configure fanout\n");
+        return NULL;
     }
 
     unsigned char *buffer = (unsigned char *) malloc(65536); //to receive data
@@ -46,7 +59,7 @@ void *receive(void *arg) {
         }
         int buflen;
         //Receive a network packet and copy in to buffer
-        buflen=recvfrom(sock_r,buffer,65536,0,&saddr,(socklen_t *)&saddr_len);
+        buflen=recvfrom(task->sock_r,buffer,65536,0,&saddr,(socklen_t *)&saddr_len);
         if(buflen<0)
         {
             perror("error in reading recvfrom function\n");
@@ -100,12 +113,14 @@ int main(int argc, char **argv){
     }
 
     int n = atoi(argv[1]);
+    int fanout_group_id = getpid() & 0xffff;
 
     int i;
     for(i=0; i<n; i++){
         pthread_t tid;
         task_t *task = malloc(sizeof(task_t));
         task->id = i;
+        task->fanout_group_id = fanout_group_id;
         pthread_create(&tid, NULL, receive, task);
     }
 
