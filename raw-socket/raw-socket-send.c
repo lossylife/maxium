@@ -377,7 +377,7 @@ void *task_send(void *arg) {
         if(mode_verbose) printf("send() end (ec=%d)\n",ec_send);
 
         if(ec_send < 0) {
-            perror("send");
+            //perror("send");
             break;
         }
         else if ( ec_send == 0 ) {
@@ -386,7 +386,7 @@ void *task_send(void *arg) {
         }
         else {
             total += ec_send/(c_packet_sz);
-            printf("send %d packets (+%d bytes)\n",total, ec_send);
+            //printf("send %d packets (+%d bytes)\n",total, ec_send);
             fflush(0);
         }
 
