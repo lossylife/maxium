@@ -167,6 +167,9 @@ int main( int argc, char ** argv )
         return EXIT_FAILURE;
     }
 
+    int one = 1;
+    setsockopt(fd_socket, SOL_PACKET, PACKET_QDISC_BYPASS, &one, sizeof(one));
+
     /* start socket config: device and mtu */
 
     /* clear structure */
@@ -320,7 +323,7 @@ int main( int argc, char ** argv )
     }
     do {
         ec = (int) task_send((void*)0);
-        printf("Loop until queue empty (%d)\n", ec);
+        //printf("Loop until queue empty (%d)\n", ec);
     } while((ec != 0)&&(c_error == 0));
 
     /* check buffer */
