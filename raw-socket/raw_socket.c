@@ -9,9 +9,11 @@
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <net/ethernet.h>
+#include <net/if.h>
 #include <netinet/ip.h>
 #include <linux/if_packet.h>
 #include <linux/tcp.h>
