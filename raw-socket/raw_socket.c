@@ -74,6 +74,19 @@ void walk_block(struct block_desc *pbd, const int block_num) {
     received_bytes += bytes;
 }
 
+int get_interface_number_by_device_name(int socket_fd, char *interface_name) {
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+
+    strncpy(ifr.ifr_name, interface_name, sizeof(ifr.ifr_name));
+
+    if (ioctl(socket_fd, SIOCGIFINDEX, &ifr) == -1) {
+        return -1;
+    }
+
+    return ifr.ifr_ifindex;
+}
+
 void *receive(void *arg) {
     task_t *task = (task_t *)arg;
 
@@ -92,8 +105,23 @@ void *receive(void *arg) {
         return NULL;
     }
 
-    
+    int interface_number = get_interface_number_by_device_name(task->sock_r, "eth0");
+    if (interface_number == -1) {
+        printf("Can't get interface number by interface name\n");
+        return NULL;
+    }
 
+    struct sockaddr_ll bind_address;
+    memset(&bind_address, 0, sizeof(bind_address));
+
+    bind_address.sll_family = AF_PACKET;
+    bind_address.sll_protocol = htons(ETH_P_ALL);
+    bind_address.sll_ifindex = interface_number;
+    int bind_result = bind(task->sock_r, (struct sockaddr *)&bind_address, sizeof(bind_address));
+    if (bind_result == -1) {
+        printf("Can't bind to AF_PACKET socket\n");
+        return NULL;
+    }
 
     int version = TPACKET_V3;
     int setsockopt_packet_version = setsockopt(task->sock_r, SOL_PACKET, PACKET_VERSION, &version, sizeof(version));
