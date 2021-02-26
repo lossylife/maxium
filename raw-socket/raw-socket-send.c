@@ -28,11 +28,13 @@ static char tx_buf[] = {0x12, 0x1B, 0x74, 0x31, 0x4C, 0x59, 0x12, 0xDE, 0x4A, 0x
 static char * str_devname= NULL;
 static int c_packet_sz   = 66;
 static int c_packet_nb   = 1000;
-static int c_buffer_sz   = 1024*8;
-static int c_buffer_nb   = 1024;
+static int c_buffer_sz   = 1024*1024;
+static int c_buffer_nb   = 128;
+static int c_frame_sz   = 4*1024;
+static int c_frame_nb   = 32*1024;
 static int c_sndbuf_sz   = 0;
 static int c_mtu         = 0;
-static int c_send_mask   = 127;
+static int c_send_mask   = 1023;
 static int c_error       = 0;
 static int mode_dgram    = 0;
 static int mode_thread   = 0;
@@ -216,9 +218,9 @@ int main( int argc, char ** argv )
     }
     /* prepare Tx ring request */
     s_packet_req.tp_block_size = c_buffer_sz;
-    s_packet_req.tp_frame_size = c_buffer_sz;
+    s_packet_req.tp_frame_size = c_frame_sz;
     s_packet_req.tp_block_nr = c_buffer_nb;
-    s_packet_req.tp_frame_nr = c_buffer_nb;
+    s_packet_req.tp_frame_nr = c_frame_nb;
 
 
     /* calculate memory to mmap in the kernel */
@@ -419,7 +421,7 @@ void *task_fill(void *arg) {
 
         /* get free buffer */
         do {
-            ps_header = ((struct tpacket_hdr *)((void *)ps_header_start + (c_buffer_sz*i_index)));
+            ps_header = ((struct tpacket_hdr *)((void *)ps_header_start + (c_frame_sz*i_index)));
             data = ((void*) ps_header) + data_offset;
             switch((volatile uint32_t)ps_header->tp_status)
             {
@@ -446,7 +448,7 @@ void *task_fill(void *arg) {
         while(loop == 1);
 
         i_index ++;
-        if(i_index >= c_buffer_nb)
+        if(i_index >= c_frame_nb)
         {
             i_index = 0;
             first_loop = 0;
