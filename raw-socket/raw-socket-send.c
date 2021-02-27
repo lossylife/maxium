@@ -441,8 +441,9 @@ void *task_fill(void *arg) {
 
                 default:
                     /* nothing to do => schedule : useful if no SMP */
-                    usleep(0);
-                    break;
+                    //usleep(0);
+                    task_send((void*)0);
+                    continue;
             }
         }
         while(loop == 1);
